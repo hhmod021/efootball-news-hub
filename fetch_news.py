@@ -7,7 +7,7 @@ import time
 import re
 from deep_translator import GoogleTranslator
 
-# مصادر مخصصة لـ eFootball و PES حصراً (Reddit RSS مخصص لـ eFootball + Konami Feed)
+# مصادر مخصصة لـ eFootball و PES حصراً
 RSS_FEEDS = [
     "https://www.konami.com/games/efootball/feed/",
     "https://www.reddit.com/r/eFootball/.rss",
@@ -18,8 +18,8 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
 }
 
-# الكلمات المفتاحية لضمان أن الخبر خاص بـ eFootball / PES فقط
-KEYWORDS = ['efootball', 'pes', 'konami', 'potw', 'epic', 'booster', 'mobile', 'update', 'patch', 'maintenance', 'coins', 'card', 'messi', 'luxe']
+# كلمات مفتاحية للتأكد من أن الخبر خاص بـ eFootball فقط
+KEYWORDS = ['efootball', 'pes', 'konami', 'potw', 'epic', 'booster', 'mobile', 'update', 'patch', 'maintenance', 'coins', 'card', 'messi', 'pack', 'leak']
 
 def is_relevant(text):
     if not text:
@@ -31,12 +31,10 @@ def translate_text(text):
     if not text or len(text.strip()) == 0:
         return ""
     try:
-        # إزالة أكواد HTML والتنظيف قبل الترجمة
         clean_text = re.sub('<[^<]+?>', '', text).strip()
         if 'Error 500' in clean_text or 'Server Error' in clean_text:
             return ""
         
-        # قص النص الطويل للترجمة السليمة
         truncated = clean_text[:800]
         translated = GoogleTranslator(source='auto', target='ar').translate(truncated)
         return translated if translated else clean_text
@@ -56,7 +54,7 @@ def extract_image_url(item, description_text):
         if img_match:
             return img_match.group(1)
             
-    # صورة افتراضية رسمية لـ eFootball في حال عدم وجود صورة مع الخبر
+    # صورة افتراضية رسمية لـ eFootball
     return "https://www.konami.com/games/efootball/common/images/share.png"
 
 def parse_rss_feed(feed_url):
@@ -67,38 +65,39 @@ def parse_rss_feed(feed_url):
             root = ET.fromstring(response.content)
             
             for item in root.findall('.//item')[:10]:
-                title = item.find('title').text if item.find('title') is not None else ''
+                title_en = item.find('title').text if item.find('title') is not None else ''
                 link = item.find('link').text if item.find('link') is not None else ''
                 pubDate = item.find('pubDate').text if item.find('pubDate') is not None else datetime.now().isoformat()
                 
                 desc_elem = item.find('description')
                 description_raw = desc_elem.text if desc_elem is not None else ''
+                details_en = re.sub('<[^<]+?>', '', description_raw).strip()
                 
-                # تصفية الأخبار والغربلة: التأكد أن الخبر خاص بـ eFootball فقط وليس خطأ سيرفر
-                full_check_text = f"{title} {description_raw}"
+                full_check_text = f"{title_en} {description_raw}"
                 if not is_relevant(full_check_text) or 'Error 500' in full_check_text:
                     continue
 
                 image_url = extract_image_url(item, description_raw)
 
-                if title and link:
-                    translated_title = translate_text(title)
-                    translated_details = translate_text(description_raw) if description_raw else translated_title
+                if title_en and link:
+                    title_ar = translate_text(title_en)
+                    details_ar = translate_text(details_en) if details_en else title_ar
 
-                    if translated_title:
-                        articles.append({
-                            "title": translated_title,
-                            "details": translated_details,
-                            "image": image_url,
-                            "link": link,
-                            "pubDate": pubDate
-                        })
+                    articles.append({
+                        "title": title_ar,
+                        "title_en": title_en,
+                        "details": details_ar,
+                        "details_en": details_en if details_en else title_en,
+                        "image": image_url,
+                        "link": link,
+                        "pubDate": pubDate
+                    })
     except Exception as e:
         print(f"Error fetching {feed_url}: {e}")
     return articles
 
 def main():
-    print("Fetching filtered eFootball/PES news with full details...")
+    print("Fetching filtered eFootball news with bilingual support & full details...")
     all_articles = []
     
     for feed in RSS_FEEDS:
@@ -106,14 +105,13 @@ def main():
         all_articles.extend(articles)
         time.sleep(1)
 
-    # إزالة التكرار
     unique_articles = {v['link']: v for v in all_articles}.values()
     final_list = list(unique_articles)
 
     if final_list:
         with open('efootball_news.json', 'w', encoding='utf-8') as f:
             json.dump(final_list, f, ensure_ascii=False, indent=2)
-        print(f"Successfully saved {len(final_list)} pure eFootball articles!")
+        print(f"Successfully saved {len(final_list)} dual-language eFootball articles!")
 
 if __name__ == "__main__":
     main()
