@@ -7,16 +7,16 @@ import time
 import re
 from deep_translator import GoogleTranslator
 
-# مصادر الأخبار والتسريبات المباشرة
+# مصادر الأخبار والتسريبات
 RSS_FEEDS = [
     "https://www.konami.com/games/efootball/feed/",
     "https://www.reddit.com/r/eFootball/.rss",
     "https://www.reddit.com/r/pesmobile/.rss"
 ]
 
-# تغيير الهيدر لتجاوز حظر Reddit بداخل GitHub Actions
+# هيدر متصفح كامل لمنع الحظر
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
 }
 
 def translate_text(text):
@@ -26,34 +26,37 @@ def translate_text(text):
         clean_text = re.sub('<[^<]+?>', '', text).strip()
         if 'Error 500' in clean_text or 'Server Error' in clean_text:
             return ""
-        truncated = clean_text[:800]
+        truncated = clean_text[:500]
         translated = GoogleTranslator(source='auto', target='ar').translate(truncated)
         return translated if translated else clean_text
     except Exception as e:
-        print(f"Translation error: {e}")
+        print(f"Translation bypassed due to error: {e}")
         return re.sub('<[^<]+?>', '', text).strip()
 
 def extract_image_url(item, description_text):
-    for elem in item.iter():
-        if 'content' in elem.tag or 'thumbnail' in elem.tag or elem.tag == 'enclosure':
-            url = elem.attrib.get('url')
-            if url and any(url.endswith(ext) for ext in ['.jpg', '.png', '.jpeg', '.webp']):
-                return url
-    if description_text:
-        img_match = re.search(r'<img [^>]*src=["\']([^"\']+)["\']', description_text)
-        if img_match:
-            return img_match.group(1)
+    try:
+        for elem in item.iter():
+            if 'content' in elem.tag or 'thumbnail' in elem.tag or elem.tag == 'enclosure':
+                url = elem.attrib.get('url')
+                if url and any(url.endswith(ext) for ext in ['.jpg', '.png', '.jpeg', '.webp']):
+                    return url
+        if description_text:
+            img_match = re.search(r'<img [^>]*src=["\']([^"\']+)["\']', description_text)
+            if img_match:
+                return img_match.group(1)
+    except Exception:
+        pass
             
     return "https://www.konami.com/games/efootball/common/images/share.png"
 
 def parse_rss_feed(feed_url):
     articles = []
     try:
-        response = requests.get(feed_url, headers=HEADERS, timeout=10)
+        response = requests.get(feed_url, headers=HEADERS, timeout=12)
         if response.status_code == 200:
             root = ET.fromstring(response.content)
             
-            for item in root.findall('.//item')[:10]:
+            for item in root.findall('.//item')[:8]:
                 title_en = item.find('title').text if item.find('title') is not None else ''
                 link = item.find('link').text if item.find('link') is not None else ''
                 pubDate = item.find('pubDate').text if item.find('pubDate') is not None else datetime.now().isoformat()
@@ -62,7 +65,6 @@ def parse_rss_feed(feed_url):
                 description_raw = desc_elem.text if desc_elem is not None else ''
                 details_en = re.sub('<[^<]+?>', '', description_raw).strip()
                 
-                # استبعاد أخطاء السيرفر فقط دون حظر باقي المقالات
                 if 'Error 500' in title_en or 'Server Error' in title_en:
                     continue
 
@@ -73,9 +75,9 @@ def parse_rss_feed(feed_url):
                     details_ar = translate_text(details_en) if details_en else title_ar
 
                     articles.append({
-                        "title": title_ar,
+                        "title": title_ar if title_ar else title_en,
                         "title_en": title_en,
-                        "details": details_ar,
+                        "details": details_ar if details_ar else details_en,
                         "details_en": details_en if details_en else title_en,
                         "image": image_url,
                         "link": link,
@@ -86,7 +88,7 @@ def parse_rss_feed(feed_url):
     return articles
 
 def main():
-    print("Fetching news...")
+    print("Starting news aggregation...")
     all_articles = []
     
     for feed in RSS_FEEDS:
@@ -97,13 +99,13 @@ def main():
     unique_articles = {v['link']: v for v in all_articles}.values()
     final_list = list(unique_articles)
 
-    # عدم كتابة ملف فارغ إذا فشل الجلب
-    if final_list:
+    # كتابة الملف فقط في حال وجود مقالات
+    if len(final_list) > 0:
         with open('efootball_news.json', 'w', encoding='utf-8') as f:
             json.dump(final_list, f, ensure_ascii=False, indent=2)
         print(f"Successfully saved {len(final_list)} articles!")
     else:
-        print("No articles fetched, file kept as is.")
+        print("No new articles retrieved. Keeping previous file version.")
 
 if __name__ == "__main__":
     main()
