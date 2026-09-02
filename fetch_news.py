@@ -14,12 +14,10 @@ RSS_FEEDS = [
     "https://www.reddit.com/r/pesmobile/.rss"
 ]
 
+# تغيير الهيدر لتجاوز حظر Reddit بداخل GitHub Actions
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 }
-
-# كلمات مفتاحية مرنة تشمل مصطلحات اللعبة الشائعة
-KEYWORDS = ['efootball', 'pes', 'konami', 'potw', 'epic', 'booster', 'mobile', 'update', 'patch', 'coins', 'card', 'messi', 'pack', 'leak', 'game', 'season', 'match', 'event']
 
 def translate_text(text):
     if not text or len(text.strip()) == 0:
@@ -64,7 +62,7 @@ def parse_rss_feed(feed_url):
                 description_raw = desc_elem.text if desc_elem is not None else ''
                 details_en = re.sub('<[^<]+?>', '', description_raw).strip()
                 
-                # استبعاد أخطاء السيرفرات فقط
+                # استبعاد أخطاء السيرفر فقط دون حظر باقي المقالات
                 if 'Error 500' in title_en or 'Server Error' in title_en:
                     continue
 
@@ -88,7 +86,7 @@ def parse_rss_feed(feed_url):
     return articles
 
 def main():
-    print("Fetching eFootball news...")
+    print("Fetching news...")
     all_articles = []
     
     for feed in RSS_FEEDS:
@@ -99,10 +97,13 @@ def main():
     unique_articles = {v['link']: v for v in all_articles}.values()
     final_list = list(unique_articles)
 
+    # عدم كتابة ملف فارغ إذا فشل الجلب
     if final_list:
         with open('efootball_news.json', 'w', encoding='utf-8') as f:
             json.dump(final_list, f, ensure_ascii=False, indent=2)
-        print(f"Saved {len(final_list)} articles successfully!")
+        print(f"Successfully saved {len(final_list)} articles!")
+    else:
+        print("No articles fetched, file kept as is.")
 
 if __name__ == "__main__":
     main()
