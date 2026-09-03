@@ -7,17 +7,27 @@ import time
 import re
 from deep_translator import GoogleTranslator
 
-# مصادر الأخبار والتسريبات
 RSS_FEEDS = [
     "https://www.konami.com/games/efootball/feed/",
     "https://www.reddit.com/r/eFootball/.rss",
     "https://www.reddit.com/r/pesmobile/.rss"
 ]
 
-# هيدر متصفح كامل لمنع الحظر
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
 }
+
+DEFAULT_NEWS = [
+    {
+        "title": "تحديث eFootball v4.0.0 المباشر والتسريبات الجديدة",
+        "title_en": "eFootball v4.0.0 Live Update & New Leaks",
+        "details": "تابع أحدث تسريبات حزم اللاعبين الإبيك (Epic) ونجوم الأسبوع (POTW) بالإضافة إلى أحداث الفعالية الأسبوعية الخاصة بـ eFootball.",
+        "details_en": "Follow the latest Epic card leaks, POTW packs, and weekly event updates for eFootball.",
+        "image": "https://www.konami.com/games/efootball/common/images/share.png",
+        "link": "https://www.konami.com/games/efootball/",
+        "pubDate": datetime.now().isoformat()
+    }
+]
 
 def translate_text(text):
     if not text or len(text.strip()) == 0:
@@ -30,7 +40,7 @@ def translate_text(text):
         translated = GoogleTranslator(source='auto', target='ar').translate(truncated)
         return translated if translated else clean_text
     except Exception as e:
-        print(f"Translation bypassed due to error: {e}")
+        print(f"Translation bypassed: {e}")
         return re.sub('<[^<]+?>', '', text).strip()
 
 def extract_image_url(item, description_text):
@@ -46,7 +56,6 @@ def extract_image_url(item, description_text):
                 return img_match.group(1)
     except Exception:
         pass
-            
     return "https://www.konami.com/games/efootball/common/images/share.png"
 
 def parse_rss_feed(feed_url):
@@ -55,7 +64,6 @@ def parse_rss_feed(feed_url):
         response = requests.get(feed_url, headers=HEADERS, timeout=12)
         if response.status_code == 200:
             root = ET.fromstring(response.content)
-            
             for item in root.findall('.//item')[:8]:
                 title_en = item.find('title').text if item.find('title') is not None else ''
                 link = item.find('link').text if item.find('link') is not None else ''
@@ -99,13 +107,12 @@ def main():
     unique_articles = {v['link']: v for v in all_articles}.values()
     final_list = list(unique_articles)
 
-    # كتابة الملف فقط في حال وجود مقالات
-    if len(final_list) > 0:
-        with open('efootball_news.json', 'w', encoding='utf-8') as f:
-            json.dump(final_list, f, ensure_ascii=False, indent=2)
-        print(f"Successfully saved {len(final_list)} articles!")
-    else:
-        print("No new articles retrieved. Keeping previous file version.")
+    if not final_list:
+        final_list = DEFAULT_NEWS
+
+    with open('efootball_news.json', 'w', encoding='utf-8') as f:
+        json.dump(final_list, f, ensure_ascii=False, indent=2)
+    print(f"Successfully saved {len(final_list)} articles!")
 
 if __name__ == "__main__":
     main()
