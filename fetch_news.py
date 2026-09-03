@@ -7,27 +7,17 @@ import time
 import re
 from deep_translator import GoogleTranslator
 
+# توسيع المصادر لتشمل أهم مجتمعات وأخبار eFootball و PES
 RSS_FEEDS = [
     "https://www.konami.com/games/efootball/feed/",
     "https://www.reddit.com/r/eFootball/.rss",
-    "https://www.reddit.com/r/pesmobile/.rss"
+    "https://www.reddit.com/r/pesmobile/.rss",
+    "https://www.reddit.com/r/eFootball/new/.rss"
 ]
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
 }
-
-DEFAULT_NEWS = [
-    {
-        "title": "تحديث eFootball v4.0.0 المباشر والتسريبات الجديدة",
-        "title_en": "eFootball v4.0.0 Live Update & New Leaks",
-        "details": "تابع أحدث تسريبات حزم اللاعبين الإبيك (Epic) ونجوم الأسبوع (POTW) بالإضافة إلى أحداث الفعالية الأسبوعية الخاصة بـ eFootball.",
-        "details_en": "Follow the latest Epic card leaks, POTW packs, and weekly event updates for eFootball.",
-        "image": "https://www.konami.com/games/efootball/common/images/share.png",
-        "link": "https://www.konami.com/games/efootball/",
-        "pubDate": datetime.now().isoformat()
-    }
-]
 
 def translate_text(text):
     if not text or len(text.strip()) == 0:
@@ -64,7 +54,8 @@ def parse_rss_feed(feed_url):
         response = requests.get(feed_url, headers=HEADERS, timeout=12)
         if response.status_code == 200:
             root = ET.fromstring(response.content)
-            for item in root.findall('.//item')[:8]:
+            # رفع عدد العناصر المجلوبة من كل مصدر إلى 15 خبراً
+            for item in root.findall('.//item')[:15]:
                 title_en = item.find('title').text if item.find('title') is not None else ''
                 link = item.find('link').text if item.find('link') is not None else ''
                 pubDate = item.find('pubDate').text if item.find('pubDate') is not None else datetime.now().isoformat()
@@ -96,7 +87,7 @@ def parse_rss_feed(feed_url):
     return articles
 
 def main():
-    print("Starting news aggregation...")
+    print("Starting full news aggregation...")
     all_articles = []
     
     for feed in RSS_FEEDS:
@@ -107,12 +98,13 @@ def main():
     unique_articles = {v['link']: v for v in all_articles}.values()
     final_list = list(unique_articles)
 
-    if not final_list:
-        final_list = DEFAULT_NEWS
+    # حفظ حتى 20 خبراً وتحديثاً متجدداً
+    final_list = final_list[:20]
 
-    with open('efootball_news.json', 'w', encoding='utf-8') as f:
-        json.dump(final_list, f, ensure_ascii=False, indent=2)
-    print(f"Successfully saved {len(final_list)} articles!")
+    if final_list:
+        with open('efootball_news.json', 'w', encoding='utf-8') as f:
+            json.dump(final_list, f, ensure_ascii=False, indent=2)
+        print(f"Successfully saved {len(final_list)} articles!")
 
 if __name__ == "__main__":
     main()
