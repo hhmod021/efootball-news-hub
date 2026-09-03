@@ -1,11 +1,12 @@
 [
   {
-    "title": "تحديث eFootball المباشر والإعلانات الرسمية",
-    "title_en": "eFootball Official Announcements & Live Updates",
-    "details": "تابع أحدث التحديثات الرسمية، حزم الأحداث، والصيانة الأسبوعية المعتمدة من شركة Konami لـ eFootball.",
-    "details_en": "Follow official KONAMI eFootball updates, maintenance info, and weekly event packs.",
+    "title": "إشعار وتحديثات الصيانة وإصلاح الأخطاء الرسمية",
+    "title_en": "Official Maintenance & Bug Fix Notice",
+    "details": "تابع حالة الصيانة الدورية للسيرفرات وإشعار المشاكل الفنية المكتشفة مباشرة عبر موقع كونامي.",
+    "details_en": "Track periodic server maintenance and official technical issue notices from Konami.",
+    "category": "maintenance",
     "image": "https://www.konami.com/games/efootball/common/images/share.png",
-    "link": "https://www.konami.com/games/efootball/",
-    "pubDate": "2026-09-03T15:24:43.320520"
+    "link": "https://www.konami.com/games/efootball/en/page/2025/info_detail",
+    "pubDate": "2026-09-03T15:47:46.251735"
   }
 ]
