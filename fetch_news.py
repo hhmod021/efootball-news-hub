@@ -6,19 +6,29 @@ import xml.etree.ElementTree as ET
 import time
 import re
 import html
-from difflib import SequenceMatcher
 from deep_translator import GoogleTranslator
 
-# مصادر موثوقة: موقع كونامي الرسمي + حساب تويتر/X الرسمي لـ eFootball عبر Nitter
+# المصادر الرسمية المباشرة لشركة Konami و eFootball
 RSS_FEEDS = [
     "https://www.konami.com/games/efootball/feed/",
-    "https://nitter.net/eFootball/rss",
-    "https://rsshub.app/twitter/user/eFootball"
+    "https://www.reddit.com/r/eFootball/search.rss?q=flair_name%3A%20%22Official%22&restrict_sr=1&sort=new"
 ]
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
 }
+
+DEFAULT_NEWS = [
+    {
+        "title": "تحديث eFootball المباشر والإعلانات الرسمية",
+        "title_en": "eFootball Official Announcements & Live Updates",
+        "details": "تابع أحدث التحديثات الرسمية، حزم الأحداث، والصيانة الأسبوعية المعتمدة من شركة Konami لـ eFootball.",
+        "details_en": "Follow official KONAMI eFootball updates, maintenance info, and weekly event packs.",
+        "image": "https://www.konami.com/games/efootball/common/images/share.png",
+        "link": "https://www.konami.com/games/efootball/",
+        "pubDate": datetime.now().isoformat()
+    }
+]
 
 def clean_text(raw_text):
     if not raw_text:
@@ -27,12 +37,7 @@ def clean_text(raw_text):
     text = re.sub(r'<[^<]+?>', '', text)
     text = re.sub(r'&#\d+;', ' ', text)
     text = re.sub(r'u/\S+', '', text)
-    text = re.sub(r'http\S+', '', text)  # إزالة الروابط النصية داخل التغريدة
     return text.strip()
-
-def is_similar(a, b, threshold=0.75):
-    """فحص نسبة تشابه النصوص لمنع تكرار نفس الخبر من تويتر والموقع"""
-    return SequenceMatcher(None, a.lower(), b.lower()).ratio() > threshold
 
 def translate_to_arabic(text):
     if not text:
@@ -44,7 +49,7 @@ def translate_to_arabic(text):
         translated = GoogleTranslator(source='auto', target='ar').translate(clean)
         return translated if translated else clean
     except Exception as e:
-        print(f"Translation bypass: {e}")
+        print(f"Translation bypassed: {e}")
         return clean_text(text)
 
 def extract_image_url(item, description_text):
@@ -77,7 +82,7 @@ def parse_rss_feed(feed_url):
                 title_elem = item.find('title') or item.find('{http://www.w3.org/2005/Atom}title')
                 title_en = clean_text(title_elem.text) if title_elem is not None and title_elem.text else ''
 
-                if not title_en or 'Error 500' in title_en or 'Server Error' in title_en or '1500' in title_en:
+                if not title_en or 'Error 500' in title_en or 'Server Error' in title_en:
                     continue
 
                 link = ''
@@ -118,22 +123,8 @@ def parse_rss_feed(feed_url):
         print(f"Error reading {feed_url}: {e}")
     return articles
 
-def filter_duplicates(articles):
-    """فلترة وتصفية الأخبار المكررة بناءً على التشابه والروابط"""
-    unique = []
-    for article in articles:
-        duplicate = False
-        for u in unique:
-            # فحص تشابه الرابط أو تشابه عنوان الخبر برمجياً
-            if article['link'] == u['link'] or is_similar(article['title_en'], u['title_en']):
-                duplicate = True
-                break
-        if not duplicate:
-            unique.append(article)
-    return unique
-
 def main():
-    print("Fetching official eFootball news from Website & Twitter...")
+    print("Fetching KONAMI official eFootball articles...")
     all_articles = []
     
     for feed in RSS_FEEDS:
@@ -141,13 +132,15 @@ def main():
         all_articles.extend(articles)
         time.sleep(1)
 
-    # تطبيق التصفية لمنع التكرار
-    final_list = filter_duplicates(all_articles)[:15]
+    unique_articles = {v['link']: v for v in all_articles if v['title']}.values()
+    final_list = list(unique_articles)
 
-    if final_list:
-        with open('efootball_news.json', 'w', encoding='utf-8') as f:
-            json.dump(final_list, f, ensure_ascii=False, indent=2)
-        print(f"Successfully saved {len(final_list)} unique official articles!")
+    if not final_list:
+        final_list = DEFAULT_NEWS
+
+    with open('efootball_news.json', 'w', encoding='utf-8') as f:
+        json.dump(final_list, f, ensure_ascii=False, indent=2)
+    print(f"Successfully saved {len(final_list)} official articles!")
 
 if __name__ == "__main__":
     main()
