@@ -1,26 +1,22 @@
-{
-  "ar": {
-    "updates_and_additions": [],
-    "maintenance_and_fixes": [
-      {
-        "title": "إشعار الصيانة الدورية وإصلاح الأخطاء الرسمية",
-        "content": "متابعة أعمال الصيانة الدورية للسيرفرات، التحديثات المباشرة، والإصلاحات التقنية الرسمية القادمة من شركة كونامي.",
-        "image": "https://konami.com",
-        "link": "https://konami.com",
-        "date": "2026-09-04T11:39:34.003781"
-      }
-    ]
+[
+  {
+    "title": "تحديثات eFootball الرسمية والحملات الجديدة",
+    "title_en": "eFootball Official Updates & Campaigns",
+    "details": "تابع أحدث التحديثات اليومية والحملات الخاصة بـ eFootball عبر الموقع الرسمي لشركة Konami.",
+    "details_en": "Track daily official updates and campaigns directly from KONAMI website.",
+    "category": "updates",
+    "image": "https://www.konami.com/games/efootball/common/images/share.png",
+    "link": "https://konami.com",
+    "pubDate": "2026-09-04T11:49:49.479359"
   },
-  "en": {
-    "updates_and_additions": [],
-    "maintenance_and_fixes": [
-      {
-        "title": "Official Maintenance & Bug Fix Notice",
-        "content": "Track periodic server maintenance, live updates, and official technical fixes directly from KONAMI servers.",
-        "image": "https://konami.com",
-        "link": "https://konami.com",
-        "date": "2026-09-04T11:39:34.003781"
-      }
-    ]
+  {
+    "title": "إشعار وتحديثات الصيانة والمشاكل التقنية",
+    "title_en": "Official Maintenance & Technical Notices",
+    "details": "تابع حالة السيرفرات المباشرة وإشعار المشاكل الفنية المكتشفة من شركة Konami.",
+    "details_en": "Track live server status and official technical notices directly from Konami.",
+    "category": "maintenance",
+    "image": "https://www.konami.com/games/efootball/common/images/share.png",
+    "link": "https://konami.com?category=maintenance",
+    "pubDate": "2026-09-04T11:49:49.479367"
   }
-}
+]
