@@ -1,176 +1,122 @@
+#!/usr/bin/env python3
 import requests
 import json
-import time
 from datetime import datetime
-import xml.etree.ElementTree as ET
 import re
 import html
 from deep_translator import GoogleTranslator
 
-# روابط الـ RSS الخاصة بك (التي تحتوي على التسريبات والأخبار)
-KONAMI_INFO_URL = "https://konami.com"
-RSS_FEEDS = [
-    "https://reddit.com",
-    "https://reddit.com"
-]
+# الروابط الرسمية الثلاثة المعتمدة حصراً من شركة KONAMI
+URL_UPDATES_AR = "https://konami.com"
+URL_UPDATES_EN = "https://konami.com"
+URL_MAINTENANCE = "https://konami.com?category=maintenance"
 
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
 }
 
 def clean_text(raw_text):
     if not raw_text:
         return ""
     text = html.unescape(raw_text)
-    # تنظيف وسوم الـ HTML لجعل النص جاهزاً تماماً للقراءة الصوتية في تطبيقك بدون بتر
-    text = re.sub(re.compile('<.*?>'), '', text)
+    text = re.sub(r'<[^<]+?>', '', text)
     text = re.sub(r'&#\d+;', ' ', text)
-    text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
-def extract_image_from_content(raw_content):
-    """دالة ذكية لسحب رابط أول صورة تظهر في الخبر لعرضها بالتطبيق"""
-    if not raw_content:
-        return "https://konami.com" # صورة افتراضية في حال عدم وجود صورة
-    img_urls = re.findall(r'src=["\'](https://[^"\']+\.(?:jpg|jpeg|png|gif|webp))["\']', raw_content)
-    if img_urls:
-        return img_urls[0]
-    return "https://konami.com"
-
-def translate_text(text, target_lang='ar'):
-    """ترجمة النصوص بدقة وحماية من أخطاء السيرفر"""
+def translate_to_arabic(text):
     if not text:
         return ""
     try:
-        # تقصير النص للترجمة إذا كان ضخماً جداً لتفادي حظر المترجم، لكن يظل الخبر الأصلي كاملاً
-        clean_txt = clean_text(text)[:1000]
-        if "Error 500" in clean_txt or "Server Error" in clean_txt:
+        clean = clean_text(text)[:600]
+        if "Error 500" in clean or "Server Error" in clean:
             return ""
-        translated = GoogleTranslator(source='auto', target=target_lang).translate(clean_txt)
-        return translated if translated else clean_text(text)
-    except Exception as e:
+        translated = GoogleTranslator(source='auto', target='ar').translate(clean)
+        return translated if translated else clean
+    except Exception:
         return clean_text(text)
 
-def categorize_article(title, content):
-    """تصنيف تلقائي مبني على فحص الكلمات المفتاحية في العنوان والمحتوى"""
-    title_lower = title.lower() + content.lower()
-    maintenance_keywords = ['maintenance', 'issue', 'fix', 'notice', 'server', 'صيانة', 'إصلاح', 'عطل', 'توقف']
-    
-    if any(k in title_lower for k in maintenance_keywords):
-        return "maintenance_and_fixes" # التبويب الثاني
-    return "updates_and_additions" # التبويب الأول
-
-def parse_rss_feed(feed_url):
+def fetch_category_news(url, category_type, is_english=False):
     articles = []
     try:
-        response = requests.get(feed_url, headers=HEADERS, timeout=12)
-        if response.status_code == 200:
-            root = ET.fromstring(response.content)
+        res = requests.get(url, headers=HEADERS, timeout=12)
+        if res.status_code == 200:
+            titles = re.findall(r'<h3[^>]*>(.*?)</h3>', res.text, re.DOTALL)
+            dates = re.findall(r'(\d{2}/\d{2}/\d{4})', res.text)
             
-            # التعامل مع صيغ XML المختلفة (Atom و RSS)
-            namespaces = {'atom': 'http://w3.org'}
-            items = root.findall('.//atom:entry', namespaces) if 'entry' in response.text else root.findall('.//item')
-            
-            for item in items[:10]:
-                title_elem = item.find('atom:title', namespaces) if item.find('atom:title', namespaces) is not None else item.find('title')
-                if title_elem is None:
+            for i, title_raw in enumerate(titles[:8]):
+                title_clean = clean_text(title_raw)
+                if not title_clean or len(title_clean) < 4 or "Error" in title_clean:
                     continue
-                    
-                title_en = clean_text(title_elem.text)
                 
-                # جلب الرابط
-                link_elem = item.find('atom:link', namespaces) if item.find('atom:link', namespaces) is not None else item.find('link')
-                link = link_elem.get('href') if link_elem is not None and link_elem.get('href') else (link_elem.text if link_elem is not None else KONAMI_INFO_URL)
-                
-                # جلب محتوى الخبر الكامل "من دهوك للبصرة" بدون بتر
-                desc_elem = item.find('atom:content', namespaces) or item.find('atom:summary', namespaces) or item.find('description')
-                raw_content = desc_elem.text if desc_elem is not None else ""
-                content_en = clean_text(raw_content)
-                
-                # استخراج الصورة المصغرة للخبر
-                image_url = extract_image_from_content(raw_content)
-                
-                # الترجمة للغة العربية لتجهيزها مسبقاً للتطبيق
-                title_ar = translate_text(title_en, 'ar')
-                content_ar = translate_text(content_en, 'ar')
-                
-                category = categorize_article(title_en, content_en)
-                
+                pub_date = dates[i] if i < len(dates) else datetime.now().strftime("%Y-%m-%d")
+
+                if is_english:
+                    title_en = title_clean
+                    title_ar = translate_to_arabic(title_clean)
+                else:
+                    title_ar = title_clean
+                    title_en = title_clean
+
                 articles.append({
+                    "title": title_ar if title_ar else title_en,
                     "title_en": title_en,
-                    "title_ar": title_ar,
-                    "content_en": content_en,
-                    "content_ar": content_ar,
-                    "image": image_url,
-                    "link": link,
-                    "category": category,
-                    "pubDate": datetime.now().isoformat()
+                    "details": f"إعلان رسمي من شركة كونامي: {title_ar}",
+                    "details_en": f"Official Konami Announcement: {title_en}",
+                    "category": category_type,
+                    "image": "https://www.konami.com/games/efootball/common/images/share.png",
+                    "link": url,
+                    "pubDate": pub_date
                 })
     except Exception as e:
-        print(f"Error reading feed {feed_url}: {e}")
+        print(f"Error fetching from {url}: {e}")
     return articles
 
-def fetch_konami_maintenance_notice():
-    """جلب إشعار صيانة افتراضي أو محاكي من موقع كونامي ليذهب دائماً لقسم الصيانة"""
-    return [{
-        "title_en": "Official Maintenance & Bug Fix Notice",
-        "title_ar": "إشعار الصيانة الدورية وإصلاح الأخطاء الرسمية",
-        "content_en": "Track periodic server maintenance, live updates, and official technical fixes directly from KONAMI servers.",
-        "content_ar": "متابعة أعمال الصيانة الدورية للسيرفرات، التحديثات المباشرة، والإصلاحات التقنية الرسمية القادمة من شركة كونامي.",
-        "image": "https://konami.com",
-        "link": KONAMI_INFO_URL,
-        "category": "maintenance_and_fixes",
-        "pubDate": datetime.now().isoformat()
-    }]
-
 def main():
-    all_articles = fetch_konami_maintenance_notice()
-    
-    for feed in RSS_FEEDS:
-        all_articles.extend(parse_rss_feed(feed))
-        time.sleep(1) # لتفادي الحظر أثناء السحب
-        
-    # تصفية العناصر المكررة بناءً على العنوان الإنجليزي
-    unique_articles = {v['title_en']: v for v in all_articles}.values()
-    
-    # بناء الهيكل النهائي المترجم والمصنف بدقة تامة حسب طلبك وحسب لغة التطبيق
-    final_output = {
-        "ar": {
-            "updates_and_additions": [],
-            "maintenance_and_fixes": []
-        },
-        "en": {
-            "updates_and_additions": [],
-            "maintenance_and_fixes": []
-        }
-    }
-    
-    for art in list(unique_articles)[:20]:
-        cat = art["category"]
-        
-        # ملء قسم اللغة العربية في الـ JSON
-        final_output["ar"][cat].append({
-            "title": art["title_ar"],
-            "content": art["content_ar"],
-            "image": art["image"],
-            "link": art["link"],
-            "date": art["pubDate"]
-        })
-        
-        # ملء قسم اللغة الإنجليزية في الـ JSON
-        final_output["en"][cat].append({
-            "title": art["title_en"],
-            "content": art["content_en"],
-            "image": art["image"],
-            "link": art["link"],
-            "date": art["pubDate"]
-        })
-        
-    # حفظ الهيكل الجديد ليكون جاهزاً 100% لتطبيقك ليقرأ منه مباشرة
+    print("Fetching news strictly from official KONAMI links...")
+    all_articles = []
+
+    # 1. جلب أخبار التحديثات والحملات (العربية والإنجليزية)
+    articles_ar = fetch_category_news(URL_UPDATES_AR, "updates", is_english=False)
+    articles_en = fetch_category_news(URL_UPDATES_EN, "updates", is_english=True)
+    all_articles.extend(articles_ar)
+    all_articles.extend(articles_en)
+
+    # 2. جلب أخبار الصيانة والمشاكل التقنية
+    articles_maint = fetch_category_news(URL_MAINTENANCE, "maintenance", is_english=False)
+    all_articles.extend(articles_maint)
+
+    # إضافة البيانات الافتراضية الرسمية في حال عدم توفر مقالات عاجلة من السيرفر
+    if not all_articles:
+        all_articles = [
+            {
+                "title": "تحديثات eFootball الرسمية والحملات الجديدة",
+                "title_en": "eFootball Official Updates & Campaigns",
+                "details": "تابع أحدث التحديثات اليومية والحملات الخاصة بـ eFootball عبر الموقع الرسمي لشركة Konami.",
+                "details_en": "Track daily official updates and campaigns directly from KONAMI website.",
+                "category": "updates",
+                "image": "https://www.konami.com/games/efootball/common/images/share.png",
+                "link": URL_UPDATES_AR,
+                "pubDate": datetime.now().isoformat()
+            },
+            {
+                "title": "إشعار وتحديثات الصيانة والمشاكل التقنية",
+                "title_en": "Official Maintenance & Technical Notices",
+                "details": "تابع حالة السيرفرات المباشرة وإشعار المشاكل الفنية المكتشفة من شركة Konami.",
+                "details_en": "Track live server status and official technical notices directly from Konami.",
+                "category": "maintenance",
+                "image": "https://www.konami.com/games/efootball/common/images/share.png",
+                "link": URL_MAINTENANCE,
+                "pubDate": datetime.now().isoformat()
+            }
+        ]
+
+    # منع التكرار بناءً على العنوان
+    unique_articles = {v['title_en']: v for v in all_articles if v['title']}.values()
+    final_list = list(unique_articles)[:20]
+
     with open('efootball_news.json', 'w', encoding='utf-8') as f:
-        json.dump(final_output, f, ensure_ascii=False, indent=2)
-        
-    print("News successfully aggregated with images and sub-categories!")
+        json.dump(final_list, f, ensure_ascii=False, indent=2)
+    print(f"Successfully updated efootball_news.json with {len(final_list)} items strictly from KONAMI!")
 
 if __name__ == "__main__":
     main()
