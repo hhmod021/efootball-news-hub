@@ -1,12 +1,10 @@
-[
-  {
-    "title": "إشعار وتحديثات الصيانة وإصلاح الأخطاء الرسمية",
-    "title_en": "Official Maintenance & Bug Fix Notice",
-    "details": "تابع حالة الصيانة الدورية للسيرفرات وإشعار المشاكل الفنية المكتشفة مباشرة عبر موقع كونامي.",
-    "details_en": "Track periodic server maintenance and official technical issue notices from Konami.",
-    "category": "maintenance",
-    "image": "https://www.konami.com/games/efootball/common/images/share.png",
-    "link": "https://www.konami.com/games/efootball/en/page/2025/info_detail",
-    "pubDate": "2026-09-04T07:39:07.656139"
-  }
-]
+{
+    "ar": {
+        "updates_and_additions": [],
+        "maintenance_and_fixes": []
+    },
+    "en": {
+        "updates_and_additions": [],
+        "maintenance_and_fixes": []
+    }
+}
