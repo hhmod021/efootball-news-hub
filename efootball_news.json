@@ -1,10 +1,26 @@
 {
-    "ar": {
-        "updates_and_additions": [],
-        "maintenance_and_fixes": []
-    },
-    "en": {
-        "updates_and_additions": [],
-        "maintenance_and_fixes": []
-    }
+  "ar": {
+    "updates_and_additions": [],
+    "maintenance_and_fixes": [
+      {
+        "title": "إشعار الصيانة الدورية وإصلاح الأخطاء الرسمية",
+        "content": "متابعة أعمال الصيانة الدورية للسيرفرات، التحديثات المباشرة، والإصلاحات التقنية الرسمية القادمة من شركة كونامي.",
+        "image": "https://konami.com",
+        "link": "https://konami.com",
+        "date": "2026-09-04T11:39:34.003781"
+      }
+    ]
+  },
+  "en": {
+    "updates_and_additions": [],
+    "maintenance_and_fixes": [
+      {
+        "title": "Official Maintenance & Bug Fix Notice",
+        "content": "Track periodic server maintenance, live updates, and official technical fixes directly from KONAMI servers.",
+        "image": "https://konami.com",
+        "link": "https://konami.com",
+        "date": "2026-09-04T11:39:34.003781"
+      }
+    ]
+  }
 }
